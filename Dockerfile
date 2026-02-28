@@ -1,24 +1,24 @@
-FROM php:8.2-fpm
+# Stage 1: Composer
+FROM composer:latest AS vendor
+
+WORKDIR /app
+COPY . .
+RUN composer install --no-dev --optimize-autoloader
+
+# Stage 2: PHP Runtime
+FROM php:8.2-cli
 
 WORKDIR /var/www
 
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpng-dev libonig-dev libxml2-dev \
-    nginx
+    libpng-dev libonig-dev libxml2-dev zip unzip git curl
 
 RUN docker-php-ext-install pdo pdo_mysql
 
-# composer copy
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=vendor /app /var/www
 
-COPY . .
-
-RUN composer install --no-dev --optimize-autoloader
-
-# permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
 
-# expose port
-EXPOSE 10000
+EXPOSE 8000
 
-CMD php artisan serve --host=0.0.0.0 --port=10000
+CMD php artisan serve --host=0.0.0.0 --port=8000
